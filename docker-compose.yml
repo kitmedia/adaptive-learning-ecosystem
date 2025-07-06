@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres-education:
+    image: postgres:15
+    container_name: adaptive-learning-postgres
+    environment:
+      POSTGRES_DB: adaptive_learning
+      POSTGRES_USER: edu_user
+      POSTGRES_PASSWORD: edu_pass_dev_2025
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_education_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - education-network
+
+  redis-education:
+    image: redis:7-alpine
+    container_name: adaptive-learning-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_education_data:/data
+    networks:
+      - education-network
+
+  # Vector database para embeddings IA
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: adaptive-learning-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - education-network
+
+volumes:
+  postgres_education_data:
+  redis_education_data:
+  qdrant_data:
+
+networks:
+  education-network:
+    driver: bridge

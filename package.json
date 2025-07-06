@@ -1,0 +1,33 @@
+{
+  "name": "adaptive-learning-ecosystem",
+  "version": "1.0.0",
+  "description": "AI-powered adaptive learning platform - EbroValley Digital",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:ai-tutor\"",
+    "dev:gateway": "cd api-gateway && npm run start:dev",
+    "dev:ai-tutor": "cd services/ai-tutor && python app/main.py",
+    "build": "npm run build:gateway && npm run build:frontend",
+    "build:gateway": "cd api-gateway && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:gateway && npm run test:services",
+    "test:gateway": "cd api-gateway && npm run test",
+    "test:services": "cd services/ai-tutor && python -m pytest",
+    "validate": "./scripts/validate-ecosystem.sh",
+    "start": "./scripts/start-ecosystem.sh",
+    "db:up": "docker-compose up -d postgres-education redis-education",
+    "db:down": "docker-compose down"
+  },
+  "workspaces": [
+    "api-gateway",
+    "services/*",
+    "frontend",
+    "shared"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["education", "ai", "adaptive-learning", "ebrovalley"],
+  "author": "EbroValley Digital - ToñoAdPAOS & Claudio Supreme",
+  "license": "MIT"
+}

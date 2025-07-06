@@ -1,0 +1,163 @@
+/* Adaptive Learning Ecosystem - Global Styles */
+/* EbroValley Digital - ToñoAdPAOS & Claudio Supreme */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.app-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.app-header p {
+  opacity: 0.9;
+  font-size: 1.1rem;
+}
+
+.app-main {
+  flex: 1;
+  background: #f8fafc;
+  min-height: calc(100vh - 120px);
+}
+
+.app-footer {
+  background: #1f2937;
+  color: #9ca3af;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+/* Dashboard Components */
+.dashboard {
+  background: #f8fafc;
+  min-height: 100%;
+}
+
+.stat-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.course-card {
+  transition: all 0.2s ease-in-out;
+  background: #ffffff;
+}
+
+.course-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.recommendation-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.recommendation-card:hover {
+  transform: translateX(4px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1rem;
+  }
+  
+  .app-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .app-header p {
+    font-size: 1rem;
+  }
+  
+  .dashboard {
+    padding: 1rem;
+  }
+}
+
+/* Loading States */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.loading::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Button Styles */
+button {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: none;
+  font-family: inherit;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

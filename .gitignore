@@ -1,0 +1,154 @@
+# 🎓 Adaptive Learning Ecosystem - GitIgnore
+# EbroValley Digital - ToñoAdPAOS & Claudio Supreme
+
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python dependencies
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+.venv
+.ENV
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Environment variables
+.env*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# Jest
+coverage/
+.nyc_output/
+
+# Testing
+.jest/
+.coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Machine Learning models
+*.pkl
+*.model
+*.weights
+*.h5
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# AI-Tutor specific
+services/ai-tutor/models/
+services/ai-tutor/data/
+services/ai-tutor/logs/
+
+# Analytics data
+analytics/data/
+analytics/exports/
+
+# Certificates and keys
+*.pem
+*.key
+*.cert
+*.crt
+ssl/
+
+# Backup files
+*.bak
+*.backup
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# PyTorch
+*.pt
+*.pth
+
+# Scikit-learn
+*.joblib

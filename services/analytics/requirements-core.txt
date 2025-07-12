@@ -1,0 +1,44 @@
+# Analytics Service Core Dependencies - Production Ready
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# FastAPI and core dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.0
+pydantic==2.6.1
+python-multipart==0.0.6
+
+# Database connections
+asyncpg==0.29.0
+redis==5.0.1
+
+# Data processing and analytics
+pandas==2.2.0
+numpy==1.26.4
+scikit-learn==1.4.0
+
+# Visualization
+plotly==5.18.0
+
+# HTTP client for external requests
+httpx==0.26.0
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Monitoring and observability
+prometheus-client==0.20.0
+
+# Background task processing
+celery==5.3.6
+
+# Time series data
+influxdb-client==1.40.0
+
+# JSON Web Tokens
+PyJWT==2.8.0
+
+# Validation and serialization
+marshmallow==3.20.2
+
+# Async utilities
+aiofiles==23.2.1

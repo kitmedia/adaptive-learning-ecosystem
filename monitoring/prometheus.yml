@@ -1,0 +1,169 @@
+# 📊 Prometheus Configuration for Adaptive Learning Ecosystem
+# EbroValley Digital - Production-Grade Monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'adaptive-learning-ecosystem'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alerts/rules.yml"
+  - "alerts/adaptive-learning-rules.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # API Gateway (NestJS)
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['localhost:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Analytics Service
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['localhost:5003']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # AI-Tutor Service
+  - job_name: 'ai-tutor-service'
+    static_configs:
+      - targets: ['localhost:5004']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Collaboration Service
+  - job_name: 'collaboration-service'
+    static_configs:
+      - targets: ['localhost:5002']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Content Intelligence Service
+  - job_name: 'content-intelligence-service'
+    static_configs:
+      - targets: ['localhost:5005']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Content Management Service
+  - job_name: 'content-management-service'
+    static_configs:
+      - targets: ['localhost:5001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Notifications Service
+  - job_name: 'notifications-service'
+    static_configs:
+      - targets: ['localhost:5006']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Progress Tracking Service
+  - job_name: 'progress-tracking-service'
+    static_configs:
+      - targets: ['localhost:5007']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Frontend Application
+  - job_name: 'frontend'
+    static_configs:
+      - targets: ['localhost:4173']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Redis Database
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['localhost:9121']  # Redis exporter
+    scrape_interval: 15s
+
+  # Health checks for all services
+  - job_name: 'health-checks'
+    metrics_path: '/health'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+        - 'localhost:3001'  # API Gateway
+        - 'localhost:5001'  # Content Management
+        - 'localhost:5002'  # Collaboration
+        - 'localhost:5003'  # Analytics
+        - 'localhost:5004'  # AI-Tutor
+        - 'localhost:5005'  # Content Intelligence
+        - 'localhost:5006'  # Notifications
+        - 'localhost:5007'  # Progress Tracking
+        - 'localhost:4173'  # Frontend
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115  # Blackbox exporter
+
+  # Custom business metrics
+  - job_name: 'business-metrics'
+    static_configs:
+      - targets: ['localhost:5003']  # Analytics service provides business metrics
+    metrics_path: '/business-metrics'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+
+  # Load balancer metrics (if applicable)
+  - job_name: 'load-balancer'
+    static_configs:
+      - targets: ['localhost:8080']  # nginx or haproxy
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    honor_labels: true
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: http://localhost:8086/api/v1/prom/write?db=adaptive_learning
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Remote read configuration
+remote_read:
+  - url: http://localhost:8086/api/v1/prom/read?db=adaptive_learning
+    read_recent: true

@@ -1,0 +1,61 @@
+{
+  "dashboard": {
+    "id": "system-overview",
+    "title": "Sistema - Vista General",
+    "description": "Dashboard principal de monitoreo del sistema",
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": "system-health",
+        "title": "Estado del Sistema",
+        "type": "stat",
+        "metrics": ["system.health", "system.uptime"],
+        "thresholds": [
+          {"value": 0, "color": "red"},
+          {"value": 0.8, "color": "yellow"},
+          {"value": 0.95, "color": "green"}
+        ]
+      },
+      {
+        "id": "performance-metrics",
+        "title": "Métricas de Rendimiento",
+        "type": "timeseries",
+        "metrics": [
+          "performance.pageLoadTime",
+          "performance.renderTime",
+          "performance.apiResponseTime"
+        ],
+        "unit": "ms"
+      },
+      {
+        "id": "user-metrics",
+        "title": "Métricas de Usuario",
+        "type": "timeseries",
+        "metrics": [
+          "user.satisfaction",
+          "user.engagement",
+          "user.bounceRate"
+        ]
+      },
+      {
+        "id": "error-rate",
+        "title": "Tasa de Errores",
+        "type": "gauge",
+        "metrics": ["system.errorRate"],
+        "max": 10,
+        "thresholds": [
+          {"value": 0, "color": "green"},
+          {"value": 2, "color": "yellow"},
+          {"value": 5, "color": "red"}
+        ]
+      },
+      {
+        "id": "alerts",
+        "title": "Alertas Activas",
+        "type": "table",
+        "metrics": ["alerts.active"],
+        "columns": ["timestamp", "severity", "message", "component"]
+      }
+    ]
+  }
+}

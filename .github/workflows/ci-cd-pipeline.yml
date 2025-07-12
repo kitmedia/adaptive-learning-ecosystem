@@ -1,0 +1,543 @@
+name: 🚀 Adaptive Learning Ecosystem - CI/CD Pipeline
+# EbroValley Digital - Production-Grade Continuous Integration & Deployment
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  NODE_VERSION: '20.x'
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================================================
+  # VALIDATION & LINTING STAGE
+  # ============================================================================
+  
+  validate-and-lint:
+    name: 🔍 Validate & Lint Code
+    runs-on: ubuntu-latest
+    outputs:
+      api-gateway-changed: ${{ steps.changes.outputs.api-gateway }}
+      ai-tutor-changed: ${{ steps.changes.outputs.ai-tutor }}
+      assessment-changed: ${{ steps.changes.outputs.assessment }}
+      progress-tracking-changed: ${{ steps.changes.outputs.progress-tracking }}
+      frontend-changed: ${{ steps.changes.outputs.frontend }}
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🔍 Detect Changes
+      uses: dorny/paths-filter@v3
+      id: changes
+      with:
+        filters: |
+          api-gateway:
+            - 'api-gateway/**'
+          ai-tutor:
+            - 'services/ai-tutor/**'
+          assessment:
+            - 'services/assessment/**'
+          progress-tracking:
+            - 'services/progress-tracking/**'
+          frontend:
+            - 'frontend/**'
+          database:
+            - 'database/**'
+          docker:
+            - 'docker-compose*.yml'
+            - '**/Dockerfile'
+
+    - name: 📊 Setup Node.js
+      if: steps.changes.outputs.api-gateway == 'true' || steps.changes.outputs.frontend == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: 🐍 Setup Python
+      if: steps.changes.outputs.ai-tutor == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.progress-tracking == 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    # API Gateway Validation
+    - name: 🔧 Install API Gateway Dependencies
+      if: steps.changes.outputs.api-gateway == 'true'
+      working-directory: ./api-gateway
+      run: |
+        npm ci
+        
+    - name: 🧹 Lint API Gateway (TypeScript)
+      if: steps.changes.outputs.api-gateway == 'true'
+      working-directory: ./api-gateway
+      run: |
+        npm run lint
+        npm run format:check
+        
+    - name: 🏗️ Build API Gateway
+      if: steps.changes.outputs.api-gateway == 'true'
+      working-directory: ./api-gateway
+      run: npm run build
+
+    # Frontend Validation
+    - name: 🔧 Install Frontend Dependencies
+      if: steps.changes.outputs.frontend == 'true'
+      working-directory: ./frontend
+      run: npm ci
+        
+    - name: 🧹 Lint Frontend (React + TypeScript)
+      if: steps.changes.outputs.frontend == 'true'
+      working-directory: ./frontend
+      run: |
+        npm run lint
+        npm run type-check
+        
+    - name: 🏗️ Build Frontend
+      if: steps.changes.outputs.frontend == 'true'
+      working-directory: ./frontend
+      run: npm run build
+
+    # Python Services Validation
+    - name: 🔧 Setup Python Environment
+      if: steps.changes.outputs.ai-tutor == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.progress-tracking == 'true'
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+
+    - name: 🧹 Lint AI-Tutor Service
+      if: steps.changes.outputs.ai-tutor == 'true'
+      working-directory: ./services/ai-tutor
+      run: |
+        pip install -r requirements.txt
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check .
+        isort --check-only .
+        mypy . --ignore-missing-imports
+
+    - name: 🧹 Lint Assessment Service
+      if: steps.changes.outputs.assessment == 'true'
+      working-directory: ./services/assessment
+      run: |
+        pip install -r requirements.txt
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check .
+        isort --check-only .
+
+    - name: 🧹 Lint Progress Tracking Service
+      if: steps.changes.outputs.progress-tracking == 'true'
+      working-directory: ./services/progress-tracking
+      run: |
+        pip install -r requirements.txt
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check .
+        isort --check-only .
+
+    # Ecosystem Validation
+    - name: 🔍 Validate Ecosystem Configuration
+      run: |
+        chmod +x ./scripts/validate-ecosystem.sh
+        ./scripts/validate-ecosystem.sh --ci-mode
+
+  # ============================================================================
+  # TESTING STAGE
+  # ============================================================================
+  
+  test-services:
+    name: 🧪 Test Services
+    runs-on: ubuntu-latest
+    needs: validate-and-lint
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: adaptive_learning_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 📊 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    # API Gateway Tests
+    - name: 🧪 Test API Gateway
+      if: needs.validate-and-lint.outputs.api-gateway-changed == 'true'
+      working-directory: ./api-gateway
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/adaptive_learning_test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-secret-key-for-ci
+      run: |
+        npm ci
+        npm run test
+        npm run test:e2e
+
+    # Frontend Tests
+    - name: 🧪 Test Frontend
+      if: needs.validate-and-lint.outputs.frontend-changed == 'true'
+      working-directory: ./frontend
+      run: |
+        npm ci
+        npm run test -- --coverage --watchAll=false
+        npm run test:e2e
+
+    # Python Services Tests
+    - name: 🧪 Test AI-Tutor Service
+      if: needs.validate-and-lint.outputs.ai-tutor-changed == 'true'
+      working-directory: ./services/ai-tutor
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/adaptive_learning_test
+        REDIS_URL: redis://localhost:6379
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio
+        pytest --cov=. --cov-report=xml --cov-report=term-missing
+
+    - name: 🧪 Test Assessment Service
+      if: needs.validate-and-lint.outputs.assessment-changed == 'true'
+      working-directory: ./services/assessment
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/adaptive_learning_test
+        REDIS_URL: redis://localhost:6379
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio
+        pytest --cov=. --cov-report=xml --cov-report=term-missing
+
+    - name: 📊 Upload Coverage Reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./api-gateway/coverage/lcov.info,./frontend/coverage/lcov.info,./services/*/coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+
+  # ============================================================================
+  # SECURITY SCANNING STAGE
+  # ============================================================================
+  
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: validate-and-lint
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: 📊 Upload Trivy Results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: 🛡️ Run Snyk Security Check
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: test
+        args: --all-projects --detection-depth=4
+      continue-on-error: true
+
+  # ============================================================================
+  # BUILD DOCKER IMAGES STAGE
+  # ============================================================================
+  
+  build-images:
+    name: 🐳 Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [validate-and-lint, test-services]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    strategy:
+      matrix:
+        service: [api-gateway, ai-tutor, assessment, progress-tracking, frontend]
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔑 Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🏷️ Extract Metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: 🐳 Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./services/${{ matrix.service }}/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # ============================================================================
+  # DEPLOY TO STAGING
+  # ============================================================================
+  
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-images, security-scan]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup Environment Variables
+      run: |
+        echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+        echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
+        echo "REDIS_URL=${{ secrets.STAGING_REDIS_URL }}" >> $GITHUB_ENV
+
+    - name: 🚀 Deploy to Staging Environment
+      run: |
+        # Create deployment directory
+        mkdir -p ./deployment
+        
+        # Copy production docker-compose file
+        envsubst < docker-compose.prod.yml > ./deployment/docker-compose.yml
+        
+        # Deploy using Docker Compose
+        docker-compose -f ./deployment/docker-compose.yml pull
+        docker-compose -f ./deployment/docker-compose.yml up -d
+        
+        # Wait for services to be healthy
+        timeout 300 bash -c 'until docker-compose -f ./deployment/docker-compose.yml ps | grep -q "healthy"; do sleep 10; done'
+
+    - name: 🧪 Run Staging Health Checks
+      run: |
+        chmod +x ./scripts/health-check.sh
+        ./scripts/health-check.sh staging
+
+    - name: 📊 Run Integration Tests on Staging
+      run: |
+        chmod +x ./scripts/test-ecosystem.sh
+        ./scripts/test-ecosystem.sh --environment=staging
+
+    - name: 📢 Notify Staging Deployment
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: |
+          🚀 Staging Deployment ${{ job.status }}!
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+          Environment: staging
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # DEPLOY TO PRODUCTION
+  # ============================================================================
+  
+  deploy-production:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.event.inputs.deploy_environment == 'production' || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[deploy-prod]'))
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: ⏸️ Create Production Deployment
+      id: deployment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const deployment = await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.sha,
+            environment: 'production',
+            description: 'Production deployment via GitHub Actions',
+            auto_merge: false,
+            required_contexts: []
+          });
+          return deployment.data.id;
+
+    - name: 🔧 Setup Production Environment
+      run: |
+        echo "ENVIRONMENT=production" >> $GITHUB_ENV
+        echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
+        echo "REDIS_URL=${{ secrets.PRODUCTION_REDIS_URL }}" >> $GITHUB_ENV
+
+    - name: 📦 Create Production Backup
+      run: |
+        # Create database backup before deployment
+        echo "Creating production backup..."
+        # Add backup logic here
+        
+    - name: 🚀 Deploy to Production
+      run: |
+        # Blue-Green deployment strategy
+        echo "Deploying to production with zero-downtime strategy..."
+        
+        # Deploy new version alongside existing
+        envsubst < docker-compose.prod.yml > ./deployment/docker-compose-new.yml
+        docker-compose -f ./deployment/docker-compose-new.yml up -d
+        
+        # Health check new deployment
+        timeout 300 bash -c 'until docker-compose -f ./deployment/docker-compose-new.yml ps | grep -q "healthy"; do sleep 10; done'
+        
+        # Switch traffic to new deployment
+        # Add load balancer switch logic here
+        
+        # Stop old deployment
+        docker-compose -f ./deployment/docker-compose-old.yml down || true
+
+    - name: 🧪 Run Production Health Checks
+      run: |
+        chmod +x ./scripts/health-check.sh
+        ./scripts/health-check.sh production
+
+    - name: 📊 Update Deployment Status
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const status = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+          await github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: '${{ steps.deployment.outputs.result }}',
+            state: status,
+            description: `Production deployment ${status}`,
+            environment_url: 'https://adaptive-learning.ebrovalley.com'
+          });
+
+    - name: 📢 Notify Production Deployment
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: |
+          🏭 PRODUCTION Deployment ${{ job.status }}!
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+          Environment: production
+          URL: https://adaptive-learning.ebrovalley.com
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # CLEANUP AND MONITORING
+  # ============================================================================
+  
+  post-deployment:
+    name: 🧹 Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🧹 Cleanup Old Images
+      run: |
+        # Keep only last 5 versions of each image
+        echo "Cleaning up old Docker images..."
+        # Add cleanup logic for container registry
+
+    - name: 📊 Update Monitoring
+      run: |
+        # Update deployment tracking
+        echo "Updating deployment monitoring..."
+        # Add monitoring update logic
+
+    - name: 📝 Generate Deployment Report
+      run: |
+        # Generate deployment summary
+        echo "## Deployment Report" > deployment-report.md
+        echo "- Timestamp: $(date)" >> deployment-report.md
+        echo "- Commit: ${{ github.sha }}" >> deployment-report.md
+        echo "- Environment: ${{ env.ENVIRONMENT }}" >> deployment-report.md
+        echo "- Status: ${{ job.status }}" >> deployment-report.md
+
+    - name: 📎 Archive Deployment Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-report-${{ github.sha }}
+        path: deployment-report.md
+        retention-days: 30

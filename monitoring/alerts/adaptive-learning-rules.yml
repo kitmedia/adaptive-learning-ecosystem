@@ -1,0 +1,327 @@
+# 🚨 Adaptive Learning Ecosystem - Alert Rules
+# EbroValley Digital - Production Monitoring & Alerting
+
+groups:
+  # ========================================
+  # SYSTEM LEVEL ALERTS
+  # ========================================
+  - name: system.rules
+    interval: 30s
+    rules:
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes on {{ $labels.instance }}"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 3m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% on {{ $labels.instance }}"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Disk space critically low"
+          description: "Disk usage is above 90% on {{ $labels.instance }} mount {{ $labels.mountpoint }}"
+
+  # ========================================
+  # APPLICATION SERVICE ALERTS
+  # ========================================
+  - name: services.rules
+    interval: 15s
+    rules:
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute"
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time for {{ $labels.job }} is above 500ms"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          category: errors
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate for {{ $labels.job }} is above 5% (current: {{ $value | humanizePercentage }})"
+
+      # Low Request Rate (potential issue)
+      - alert: LowRequestRate
+        expr: rate(http_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: traffic
+        annotations:
+          summary: "Unusually low request rate"
+          description: "Request rate for {{ $labels.job }} is unusually low ({{ $value }} req/s)"
+
+  # ========================================
+  # API GATEWAY SPECIFIC ALERTS
+  # ========================================
+  - name: api-gateway.rules
+    interval: 15s
+    rules:
+      # API Gateway High Load
+      - alert: APIGatewayHighLoad
+        expr: rate(http_requests_total{job="api-gateway"}[5m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+          service: api-gateway
+        annotations:
+          summary: "API Gateway experiencing high load"
+          description: "API Gateway request rate is above 1000 req/s (current: {{ $value }})"
+
+      # API Gateway Authentication Failures
+      - alert: APIGatewayAuthFailures
+        expr: rate(http_requests_total{job="api-gateway",status="401"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          category: security
+          service: api-gateway
+        annotations:
+          summary: "High authentication failure rate"
+          description: "API Gateway authentication failures above 10/s (current: {{ $value }})"
+
+  # ========================================
+  # DATABASE ALERTS
+  # ========================================
+  - name: database.rules
+    interval: 30s
+    rules:
+      # Redis Down
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is down"
+
+      # Redis High Memory Usage
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: redis
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 90% on {{ $labels.instance }}"
+
+      # Redis High Connection Count
+      - alert: RedisHighConnections
+        expr: redis_connected_clients > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: redis
+        annotations:
+          summary: "Redis high connection count"
+          description: "Redis has more than 1000 connections on {{ $labels.instance }}"
+
+  # ========================================
+  # BUSINESS LOGIC ALERTS
+  # ========================================
+  - name: business.rules
+    interval: 60s
+    rules:
+      # High User Registration Rate (potential attack)
+      - alert: HighUserRegistrationRate
+        expr: rate(user_registrations_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+          service: analytics
+        annotations:
+          summary: "Unusually high user registration rate"
+          description: "User registration rate is above 100/5min, potential attack or bot activity"
+
+      # Low Learning Session Completion Rate
+      - alert: LowSessionCompletionRate
+        expr: rate(learning_sessions_completed_total[1h]) / rate(learning_sessions_started_total[1h]) < 0.3
+        for: 15m
+        labels:
+          severity: warning
+          category: business
+          service: analytics
+        annotations:
+          summary: "Low learning session completion rate"
+          description: "Learning session completion rate is below 30% (current: {{ $value | humanizePercentage }})"
+
+      # AI Model Prediction Accuracy Drop
+      - alert: AIModelAccuracyDrop
+        expr: ai_model_accuracy < 0.85
+        for: 10m
+        labels:
+          severity: warning
+          category: ai-performance
+          service: ai-tutor
+        annotations:
+          summary: "AI model accuracy degraded"
+          description: "AI model accuracy has dropped below 85% (current: {{ $value | humanizePercentage }})"
+
+  # ========================================
+  # SECURITY ALERTS
+  # ========================================
+  - name: security.rules
+    interval: 15s
+    rules:
+      # Multiple Failed Login Attempts
+      - alert: MultipleFailedLogins
+        expr: rate(login_attempts_total{status="failed"}[5m]) > 50
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "High failed login attempt rate"
+          description: "Failed login attempts above 50/5min, potential brute force attack"
+
+      # Suspicious API Access Patterns
+      - alert: SuspiciousAPIAccess
+        expr: rate(http_requests_total{status="403"}[5m]) > 20
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High rate of forbidden requests"
+          description: "High rate of 403 responses, potential unauthorized access attempts"
+
+      # SSL Certificate Expiry Warning
+      - alert: SSLCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7
+        for: 1h
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in less than 7 days"
+
+  # ========================================
+  # PERFORMANCE ALERTS
+  # ========================================
+  - name: performance.rules
+    interval: 30s
+    rules:
+      # Database Query Performance
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile database query time is above 1s"
+
+      # Cache Hit Rate Low
+      - alert: LowCacheHitRate
+        expr: cache_hit_rate < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+          service: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 80% (current: {{ $value | humanizePercentage }})"
+
+      # High Queue Depth
+      - alert: HighQueueDepth
+        expr: queue_depth > 1000
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High queue depth detected"
+          description: "Queue depth is above 1000 (current: {{ $value }})"
+
+  # ========================================
+  # BUSINESS CONTINUITY ALERTS
+  # ========================================
+  - name: business-continuity.rules
+    interval: 60s
+    rules:
+      # Low Active User Count
+      - alert: LowActiveUserCount
+        expr: active_users_count < 10
+        for: 30m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low active user count"
+          description: "Active user count is below expected threshold (current: {{ $value }})"
+
+      # Course Content Access Issues
+      - alert: CourseContentAccessIssues
+        expr: rate(content_access_errors_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: critical
+          category: business
+          service: content-management
+        annotations:
+          summary: "High course content access error rate"
+          description: "Course content access error rate is above 5/min"
+
+      # Assessment System Failures
+      - alert: AssessmentSystemFailures
+        expr: rate(assessment_errors_total[5m]) > 2
+        for: 2m
+        labels:
+          severity: critical
+          category: business
+          service: assessment
+        annotations:
+          summary: "Assessment system experiencing failures"
+          description: "Assessment error rate is above 2/min, students may be unable to take tests"

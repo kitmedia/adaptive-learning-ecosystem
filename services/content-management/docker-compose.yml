@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  content-management:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: content-management-service
+    ports:
+      - "8006:8006"
+      - "9096:9090"  # Metrics port
+    environment:
+      - PORT=8006
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/adaptive_learning
+      - REDIS_URL=redis://redis:6379
+      - USE_S3=false
+      - UPLOAD_PATH=/app/uploads
+      - JWT_SECRET_KEY=your-jwt-secret-key-change-in-production
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ENABLE_METRICS=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - content_uploads:/app/uploads
+      - content_temp:/app/temp
+      - ./logs:/app/logs
+    networks:
+      - adaptive-learning-network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15
+    container_name: content-postgres
+    environment:
+      POSTGRES_DB: adaptive_learning
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - content_postgres_data:/var/lib/postgresql/data
+      - ../../database:/docker-entrypoint-initdb.d
+    networks:
+      - adaptive-learning-network
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: content-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - content_redis_data:/data
+    networks:
+      - adaptive-learning-network
+    ports:
+      - "6379:6379"
+
+volumes:
+  content_uploads:
+  content_temp:
+  content_postgres_data:
+  content_redis_data:
+
+networks:
+  adaptive-learning-network:
+    external: true

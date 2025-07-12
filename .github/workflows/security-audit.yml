@@ -1,0 +1,609 @@
+name: 🛡️ Security Audit & Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security audit weekly on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      audit_level:
+        description: 'Security audit level'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - 'quick'
+          - 'standard'
+          - 'comprehensive'
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # 🔍 DEPENDENCY VULNERABILITY SCANNING
+  dependency-scan:
+    name: 🔍 Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 🔍 Audit Node.js Dependencies (API Gateway)
+        working-directory: ./api-gateway
+        run: |
+          npm ci
+          npm audit --audit-level=moderate --json > api-gateway-audit.json || echo "Vulnerabilities found"
+          npm audit --audit-level=moderate
+      
+      - name: 🔍 Audit Node.js Dependencies (Frontend)
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm audit --audit-level=moderate --json > frontend-audit.json || echo "Vulnerabilities found"
+          npm audit --audit-level=moderate
+      
+      - name: 🔍 Audit Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety bandit semgrep
+          
+          # Check for known vulnerabilities in Python packages
+          find services -name "requirements*.txt" -exec safety check --file {} --json --output safety-report.json \; || echo "Python vulnerabilities found"
+          
+          # Generate combined safety report
+          echo "=== Python Dependency Security Report ===" > python-security-report.txt
+          find services -name "requirements*.txt" -exec echo "Checking: {}" \; -exec safety check --file {} \; >> python-security-report.txt || echo "Completed with issues"
+      
+      - name: 🔍 Container Image Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-vulnerability-report.json'
+      
+      - name: 📊 Upload dependency scan results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-scan-results
+          path: |
+            api-gateway/api-gateway-audit.json
+            frontend/frontend-audit.json
+            safety-report.json
+            python-security-report.txt
+            trivy-vulnerability-report.json
+
+  # 🔐 STATIC SECURITY ANALYSIS
+  static-security-analysis:
+    name: 🔐 Static Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 🔍 Install security analysis tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit semgrep secrets-detection
+      
+      - name: 🔍 Run Bandit Security Scanner (Python)
+        run: |
+          bandit -r services/ -f json -o bandit-security-report.json || echo "Security issues found"
+          bandit -r services/ -f txt -o bandit-security-report.txt || echo "Security issues found"
+      
+      - name: 🔍 Run Semgrep Security Scanner
+        run: |
+          semgrep --config=auto --json --output=semgrep-security-report.json services/ || echo "Semgrep analysis completed"
+          semgrep --config=auto --output=semgrep-security-report.txt services/ || echo "Semgrep analysis completed"
+      
+      - name: 🔑 Scan for Hardcoded Secrets
+        run: |
+          # Create secrets detection script
+          cat > detect_secrets.py << 'EOF'
+          import re
+          import os
+          import json
+          
+          # Common secret patterns
+          SECRET_PATTERNS = {
+              'api_key': r'api[_-]?key[\'"\s]*[:=][\'"\s]*([a-zA-Z0-9_-]{20,})',
+              'password': r'password[\'"\s]*[:=][\'"\s]*[\'"]([^\'"\s]{8,})[\'"]',
+              'jwt_secret': r'jwt[_-]?secret[\'"\s]*[:=][\'"\s]*[\'"]([^\'"\s]{16,})[\'"]',
+              'database_url': r'database[_-]?url[\'"\s]*[:=][\'"\s]*[\'"]([^\'"\s]+)[\'"]',
+              'private_key': r'-----BEGIN [A-Z ]+PRIVATE KEY-----',
+              'aws_access_key': r'AKIA[0-9A-Z]{16}',
+              'github_token': r'ghp_[a-zA-Z0-9]{36}',
+          }
+          
+          def scan_file(filepath):
+              findings = []
+              try:
+                  with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                      content = f.read()
+                      for secret_type, pattern in SECRET_PATTERNS.items():
+                          matches = re.finditer(pattern, content, re.IGNORECASE)
+                          for match in matches:
+                              findings.append({
+                                  'file': filepath,
+                                  'type': secret_type,
+                                  'line': content[:match.start()].count('\n') + 1,
+                                  'match': match.group(0)[:50] + '...' if len(match.group(0)) > 50 else match.group(0)
+                              })
+              except Exception as e:
+                  print(f"Error scanning {filepath}: {e}")
+              return findings
+          
+          def main():
+              all_findings = []
+              for root, dirs, files in os.walk('.'):
+                  # Skip common non-source directories
+                  dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'venv', '__pycache__', '.cache']]
+                  
+                  for file in files:
+                      if file.endswith(('.py', '.js', '.ts', '.jsx', '.tsx', '.json', '.env', '.yml', '.yaml', '.sh')):
+                          filepath = os.path.join(root, file)
+                          findings = scan_file(filepath)
+                          all_findings.extend(findings)
+              
+              # Save results
+              with open('secrets-scan-report.json', 'w') as f:
+                  json.dump(all_findings, f, indent=2)
+              
+              print(f"Secrets scan completed. Found {len(all_findings)} potential issues.")
+              for finding in all_findings:
+                  print(f"  {finding['file']}:{finding['line']} - {finding['type']}: {finding['match']}")
+          
+          if __name__ == '__main__':
+              main()
+          EOF
+          
+          python detect_secrets.py || echo "Secrets scan completed"
+      
+      - name: 📊 Upload static analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: static-security-analysis
+          path: |
+            bandit-security-report.json
+            bandit-security-report.txt
+            semgrep-security-report.json
+            semgrep-security-report.txt
+            secrets-scan-report.json
+
+  # 🔒 CONFIGURATION SECURITY AUDIT
+  config-security-audit:
+    name: 🔒 Configuration Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Audit Docker Configurations
+        run: |
+          echo "=== Docker Security Audit ===" > docker-security-audit.txt
+          
+          # Check for security issues in Dockerfiles
+          find . -name "Dockerfile*" -exec echo "Checking: {}" \; -exec cat {} \; >> docker-security-audit.txt
+          
+          # Common Docker security checks
+          echo "=== Security Checks ===" >> docker-security-audit.txt
+          
+          # Check for running as root
+          if grep -r "USER root" --include="Dockerfile*" .; then
+            echo "WARNING: Found containers running as root" >> docker-security-audit.txt
+          else
+            echo "GOOD: No containers running as root found" >> docker-security-audit.txt
+          fi
+          
+          # Check for COPY --chown usage
+          if grep -r "COPY --chown" --include="Dockerfile*" .; then
+            echo "GOOD: Found proper file ownership usage" >> docker-security-audit.txt
+          else
+            echo "INFO: Consider using COPY --chown for better security" >> docker-security-audit.txt
+          fi
+      
+      - name: 🔍 Audit Environment Configurations
+        run: |
+          echo "=== Environment Configuration Audit ===" > env-security-audit.txt
+          
+          # Check for exposed secrets in env files
+          find . -name "*.env*" -not -path "./node_modules/*" -not -path "./.git/*" -exec echo "Checking: {}" \; -exec cat {} \; >> env-security-audit.txt || echo "No .env files found"
+          
+          # Check docker-compose configurations
+          echo "=== Docker Compose Security ===" >> env-security-audit.txt
+          find . -name "docker-compose*.yml" -exec echo "Checking: {}" \; -exec cat {} \; >> env-security-audit.txt
+      
+      - name: 🔍 Audit Database Configurations
+        run: |
+          echo "=== Database Security Audit ===" > db-security-audit.txt
+          
+          # Check database configuration files
+          find . -name "*.sql" -o -name "*database*" -type f | while read file; do
+            echo "Checking: $file" >> db-security-audit.txt
+            
+            # Check for weak default passwords
+            if grep -i "password.*123\|password.*admin\|password.*root" "$file"; then
+              echo "WARNING: Potential weak password found in $file" >> db-security-audit.txt
+            fi
+            
+            # Check for SQL injection vulnerabilities
+            if grep -i "execute.*%\|format.*%" "$file"; then
+              echo "WARNING: Potential SQL injection risk in $file" >> db-security-audit.txt
+            fi
+          done
+      
+      - name: 📊 Upload configuration audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: config-security-audit
+          path: |
+            docker-security-audit.txt
+            env-security-audit.txt
+            db-security-audit.txt
+
+  # 🌐 NETWORK SECURITY TESTING
+  network-security:
+    name: 🌐 Network Security Testing
+    runs-on: ubuntu-latest
+    needs: static-security-analysis
+    if: github.event.inputs.audit_level == 'comprehensive' || github.event_name == 'schedule'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🚀 Start ecosystem for security testing
+        run: |
+          chmod +x ./start-ecosystem.sh
+          ./start-ecosystem.sh --security-test &
+          sleep 45  # Wait for services to start
+      
+      - name: 🔍 Install security testing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nmap nikto sqlmap
+          python -m pip install requests urllib3
+      
+      - name: 🔍 Port scanning
+        run: |
+          echo "=== Port Scanning Results ===" > network-security-report.txt
+          
+          # Scan for open ports
+          nmap -sS -sV localhost -p 1-10000 >> network-security-report.txt || echo "Port scan completed"
+          
+          # Check for unexpected open ports
+          echo "=== Open Ports Analysis ===" >> network-security-report.txt
+          netstat -tulpn | grep LISTEN >> network-security-report.txt
+      
+      - name: 🔍 Web application security testing
+        run: |
+          echo "=== Web Application Security Tests ===" >> network-security-report.txt
+          
+          # Test for common web vulnerabilities
+          python << 'EOF'
+          import requests
+          import json
+          
+          services = [
+              'http://localhost:3001',  # API Gateway
+              'http://localhost:5003',  # Analytics
+              'http://localhost:5004',  # AI-Tutor
+              'http://localhost:4173',  # Frontend
+          ]
+          
+          security_tests = []
+          
+          for service in services:
+              try:
+                  # Test CORS configuration
+                  response = requests.options(f"{service}/health", headers={'Origin': 'http://malicious-site.com'})
+                  cors_test = {
+                      'service': service,
+                      'test': 'CORS',
+                      'status': 'PASS' if 'Access-Control-Allow-Origin' not in response.headers or response.headers.get('Access-Control-Allow-Origin') != '*' else 'FAIL',
+                      'details': response.headers.get('Access-Control-Allow-Origin', 'Not set')
+                  }
+                  security_tests.append(cors_test)
+                  
+                  # Test security headers
+                  response = requests.get(f"{service}/health")
+                  security_headers = ['X-Frame-Options', 'X-Content-Type-Options', 'X-XSS-Protection', 'Strict-Transport-Security']
+                  for header in security_headers:
+                      header_test = {
+                          'service': service,
+                          'test': f'Security Header: {header}',
+                          'status': 'PASS' if header in response.headers else 'FAIL',
+                          'details': response.headers.get(header, 'Missing')
+                      }
+                      security_tests.append(header_test)
+                      
+                  # Test for directory traversal
+                  response = requests.get(f"{service}/../../../etc/passwd")
+                  traversal_test = {
+                      'service': service,
+                      'test': 'Directory Traversal',
+                      'status': 'PASS' if response.status_code in [404, 403] else 'FAIL',
+                      'details': f'Status: {response.status_code}'
+                  }
+                  security_tests.append(traversal_test)
+                  
+              except Exception as e:
+                  error_test = {
+                      'service': service,
+                      'test': 'Connection',
+                      'status': 'ERROR',
+                      'details': str(e)
+                  }
+                  security_tests.append(error_test)
+          
+          # Save results
+          with open('web-security-tests.json', 'w') as f:
+              json.dump(security_tests, f, indent=2)
+          
+          # Print summary
+          for test in security_tests:
+              print(f"{test['service']} - {test['test']}: {test['status']} ({test['details']})")
+          EOF
+      
+      - name: 📊 Upload network security results
+        uses: actions/upload-artifact@v3
+        with:
+          name: network-security-results
+          path: |
+            network-security-report.txt
+            web-security-tests.json
+
+  # 📋 COMPLIANCE CHECKING
+  compliance-check:
+    name: 📋 Compliance Checking
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔍 GDPR Compliance Check
+        run: |
+          echo "=== GDPR Compliance Assessment ===" > compliance-report.txt
+          
+          # Check for data protection patterns
+          echo "## Data Protection Patterns" >> compliance-report.txt
+          
+          # Look for personal data handling
+          if grep -r "email\|phone\|address\|name" --include="*.py" --include="*.js" --include="*.ts" services/; then
+            echo "✓ Personal data handling found - ensure GDPR compliance" >> compliance-report.txt
+          fi
+          
+          # Check for encryption
+          if grep -r "encrypt\|decrypt\|hash" --include="*.py" --include="*.js" --include="*.ts" services/; then
+            echo "✓ Encryption implementation found" >> compliance-report.txt
+          else
+            echo "⚠ No encryption patterns found - verify data protection" >> compliance-report.txt
+          fi
+          
+          # Check for consent management
+          if grep -r "consent\|cookie.*policy\|privacy.*policy" --include="*.py" --include="*.js" --include="*.ts" .; then
+            echo "✓ Consent management patterns found" >> compliance-report.txt
+          else
+            echo "⚠ No consent management found - implement user consent" >> compliance-report.txt
+          fi
+      
+      - name: 🔍 FERPA Compliance Check (Educational Data)
+        run: |
+          echo "## FERPA Educational Compliance" >> compliance-report.txt
+          
+          # Check for educational record protection
+          if grep -r "student\|grade\|assessment\|academic" --include="*.py" --include="*.js" --include="*.ts" services/; then
+            echo "✓ Educational data handling found - ensure FERPA compliance" >> compliance-report.txt
+          fi
+          
+          # Check for access controls
+          if grep -r "role\|permission\|auth" --include="*.py" --include="*.js" --include="*.ts" services/; then
+            echo "✓ Access control patterns found" >> compliance-report.txt
+          else
+            echo "⚠ No access control patterns - implement educational data protection" >> compliance-report.txt
+          fi
+      
+      - name: 🔍 Security Standards Compliance
+        run: |
+          echo "## Security Standards Assessment" >> compliance-report.txt
+          
+          # Check for HTTPS enforcement
+          if grep -r "https\|ssl\|tls" --include="*.py" --include="*.js" --include="*.ts" --include="*.yml" .; then
+            echo "✓ HTTPS/SSL implementation found" >> compliance-report.txt
+          else
+            echo "⚠ No HTTPS enforcement found - implement secure connections" >> compliance-report.txt
+          fi
+          
+          # Check for input validation
+          if grep -r "validate\|sanitize\|escape" --include="*.py" --include="*.js" --include="*.ts" services/; then
+            echo "✓ Input validation patterns found" >> compliance-report.txt
+          else
+            echo "⚠ No input validation found - implement data validation" >> compliance-report.txt
+          fi
+      
+      - name: 📊 Upload compliance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance-check-results
+          path: compliance-report.txt
+
+  # 📊 SECURITY REPORT GENERATION
+  security-report:
+    name: 📊 Security Report Generation
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, static-security-analysis, config-security-audit, compliance-check]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download all security artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: security-results
+      
+      - name: 📊 Generate comprehensive security report
+        run: |
+          echo "# 🛡️ Adaptive Learning Ecosystem - Security Audit Report" > security-report.md
+          echo "" >> security-report.md
+          echo "**Generated:** $(date)" >> security-report.md
+          echo "**Commit:** ${{ github.sha }}" >> security-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
+          echo "**Audit Level:** ${{ github.event.inputs.audit_level || 'standard' }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Dependency scan results
+          echo "## 🔍 Dependency Vulnerability Scan" >> security-report.md
+          if [ -d "security-results/dependency-scan-results" ]; then
+            echo "✅ Dependency scan completed" >> security-report.md
+            
+            # Count vulnerabilities if available
+            if [ -f "security-results/dependency-scan-results/python-security-report.txt" ]; then
+              vuln_count=$(grep -i "vulnerability\|cve\|critical\|high" security-results/dependency-scan-results/python-security-report.txt | wc -l || echo "0")
+              echo "- Python dependencies: $vuln_count potential issues found" >> security-report.md
+            fi
+          else
+            echo "❌ Dependency scan failed" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Static analysis results
+          echo "## 🔐 Static Security Analysis" >> security-report.md
+          if [ -d "security-results/static-security-analysis" ]; then
+            echo "✅ Static analysis completed" >> security-report.md
+            
+            # Bandit results
+            if [ -f "security-results/static-security-analysis/bandit-security-report.json" ]; then
+              issues=$(jq '.results | length' security-results/static-security-analysis/bandit-security-report.json 2>/dev/null || echo "0")
+              echo "- Bandit scan: $issues security issues found" >> security-report.md
+            fi
+            
+            # Secrets scan results
+            if [ -f "security-results/static-security-analysis/secrets-scan-report.json" ]; then
+              secrets=$(jq '. | length' security-results/static-security-analysis/secrets-scan-report.json 2>/dev/null || echo "0")
+              echo "- Secrets scan: $secrets potential secrets found" >> security-report.md
+            fi
+          else
+            echo "❌ Static analysis failed" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Configuration audit
+          echo "## 🔒 Configuration Security Audit" >> security-report.md
+          if [ -d "security-results/config-security-audit" ]; then
+            echo "✅ Configuration audit completed" >> security-report.md
+            echo "- Docker, environment, and database configurations reviewed" >> security-report.md
+          else
+            echo "❌ Configuration audit failed" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Network security (if available)
+          echo "## 🌐 Network Security Testing" >> security-report.md
+          if [ -d "security-results/network-security-results" ]; then
+            echo "✅ Network security testing completed" >> security-report.md
+            if [ -f "security-results/network-security-results/web-security-tests.json" ]; then
+              passed=$(jq '[.[] | select(.status == "PASS")] | length' security-results/network-security-results/web-security-tests.json 2>/dev/null || echo "0")
+              failed=$(jq '[.[] | select(.status == "FAIL")] | length' security-results/network-security-results/web-security-tests.json 2>/dev/null || echo "0")
+              echo "- Web security tests: $passed passed, $failed failed" >> security-report.md
+            fi
+          else
+            echo "⚠️ Network security testing skipped" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Compliance check
+          echo "## 📋 Compliance Status" >> security-report.md
+          if [ -d "security-results/compliance-check-results" ]; then
+            echo "✅ Compliance check completed" >> security-report.md
+            if [ -f "security-results/compliance-check-results/compliance-report.txt" ]; then
+              gdpr_items=$(grep -c "✓\|⚠" security-results/compliance-check-results/compliance-report.txt || echo "0")
+              echo "- $gdpr_items compliance items reviewed" >> security-report.md
+            fi
+          else
+            echo "❌ Compliance check failed" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Recommendations
+          echo "## 🛡️ Security Recommendations" >> security-report.md
+          echo "1. **Regular Updates**: Keep all dependencies updated to latest secure versions" >> security-report.md
+          echo "2. **Access Control**: Implement role-based access control (RBAC) for all services" >> security-report.md
+          echo "3. **Encryption**: Ensure all data is encrypted in transit and at rest" >> security-report.md
+          echo "4. **Monitoring**: Implement security monitoring and alerting" >> security-report.md
+          echo "5. **Backup**: Regular security backups and disaster recovery testing" >> security-report.md
+          echo "6. **Training**: Security awareness training for development team" >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## 📎 Artifacts" >> security-report.md
+          echo "Detailed security scan results are available in the workflow artifacts:" >> security-report.md
+          find security-results -name "*.json" -o -name "*.txt" | sed 's/^/- /' >> security-report.md
+      
+      - name: 📎 Upload comprehensive security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-report-${{ github.sha }}
+          path: security-report.md
+          retention-days: 90
+      
+      - name: 📢 Comment Security Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  # 🚨 CRITICAL SECURITY ALERTS
+  security-alerts:
+    name: 🚨 Critical Security Alerts
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, static-security-analysis]
+    if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+    
+    steps:
+      - name: 🚨 Send Critical Security Alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🚨 CRITICAL SECURITY ALERT: Adaptive Learning Ecosystem
+            Security vulnerabilities detected in latest scan
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Immediate attention required!
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

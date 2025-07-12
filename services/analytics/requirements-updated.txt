@@ -1,0 +1,51 @@
+# Analytics Service Dependencies - Updated for Python 3.12
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# FastAPI and core dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.0
+pydantic==2.6.1
+python-multipart==0.0.6
+
+# Database connections
+asyncpg==0.29.0
+aioredis==2.0.1
+
+# Data processing and analytics - Updated versions for Python 3.12
+pandas==2.2.0
+numpy==1.26.4
+scikit-learn==1.4.0
+
+# Visualization
+plotly==5.18.0
+
+# HTTP client for external requests
+httpx==0.26.0
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Monitoring and observability
+prometheus-client==0.20.0
+
+# Background task processing
+celery==5.3.6
+
+# Time series data
+influxdb-client==1.40.0
+
+# JSON Web Tokens
+PyJWT==2.8.0
+
+# Validation and serialization
+marshmallow==3.20.2
+
+# Async utilities
+aiofiles==23.2.1
+
+# Development dependencies (optional)
+pytest==8.0.0
+pytest-asyncio==0.23.4
+black==24.1.1
+flake8==7.0.0
+mypy==1.8.0

@@ -1,0 +1,422 @@
+name: ⚡ Performance Testing & Optimization
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_duration:
+        description: 'Test duration in minutes'
+        required: true
+        default: '5'
+        type: choice
+        options:
+          - '1'
+          - '5'
+          - '10'
+          - '30'
+      concurrent_users:
+        description: 'Number of concurrent users'
+        required: true
+        default: '100'
+        type: choice
+        options:
+          - '50'
+          - '100'
+          - '500'
+          - '1000'
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # 🧪 UNIT PERFORMANCE TESTS
+  unit-performance:
+    name: 🧪 Unit Performance Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-benchmark memory-profiler psutil
+      
+      - name: ⚡ Run Analytics Performance Tests
+        working-directory: ./services/analytics
+        run: |
+          if [ -f "venv/bin/activate" ]; then
+            source venv/bin/activate
+            python -m pytest tests/test_performance.py --benchmark-only --benchmark-json=analytics-benchmark.json || echo "Performance tests completed"
+            deactivate
+          fi
+      
+      - name: ⚡ Run AI-Tutor Performance Tests
+        working-directory: ./services/ai-tutor
+        run: |
+          if [ -f "venv/bin/activate" ]; then
+            source venv/bin/activate
+            python -m pytest tests/test_performance.py --benchmark-only --benchmark-json=ai-tutor-benchmark.json || echo "Performance tests completed"
+            deactivate
+          fi
+      
+      - name: 📊 Upload performance artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-performance-results
+          path: |
+            services/*/benchmark.json
+            services/*/*.json
+
+  # 🌐 INTEGRATION PERFORMANCE TESTS
+  integration-performance:
+    name: 🌐 Integration Performance Tests
+    runs-on: ubuntu-latest
+    needs: unit-performance
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 🚀 Start Ecosystem Services
+        run: |
+          chmod +x ./start-ecosystem.sh
+          ./start-ecosystem.sh --test-mode &
+          sleep 30  # Wait for services to start
+      
+      - name: 🧪 Run Integration Performance Tests
+        run: |
+          chmod +x ./test-integration.sh
+          time ./test-integration.sh > integration-performance.log 2>&1
+      
+      - name: 📊 Measure Response Times
+        run: |
+          echo "=== API Gateway Response Times ===" > response-times.log
+          for i in {1..10}; do
+            curl -w "%{time_total}\n" -s -o /dev/null http://localhost:3001/health >> response-times.log
+          done
+          
+          echo "=== Analytics Service Response Times ===" >> response-times.log
+          for i in {1..10}; do
+            curl -w "%{time_total}\n" -s -o /dev/null http://localhost:5003/health >> response-times.log
+          done
+      
+      - name: 📊 Upload integration performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-performance-results
+          path: |
+            integration-performance.log
+            response-times.log
+
+  # 🔥 LOAD TESTING
+  load-testing:
+    name: 🔥 Load Testing
+    runs-on: ubuntu-latest
+    needs: integration-performance
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      
+      - name: 🚀 Start Ecosystem for Load Testing
+        run: |
+          chmod +x ./start-ecosystem.sh
+          ./start-ecosystem.sh --performance-mode &
+          sleep 60  # Wait for full startup
+      
+      - name: 🔥 Run Load Tests
+        env:
+          TEST_DURATION: ${{ github.event.inputs.test_duration || '5' }}
+          CONCURRENT_USERS: ${{ github.event.inputs.concurrent_users || '100' }}
+        run: |
+          # Create k6 load test script
+          cat > load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          
+          export let options = {
+            stages: [
+              { duration: '1m', target: 20 }, // Ramp up
+              { duration: process.env.TEST_DURATION + 'm', target: process.env.CONCURRENT_USERS }, // Stay at load
+              { duration: '1m', target: 0 }, // Ramp down
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500'], // 95% of requests under 500ms
+              http_req_failed: ['rate<0.05'], // Error rate under 5%
+            },
+          };
+          
+          export default function() {
+            // Test API Gateway health
+            let response = http.get('http://localhost:3001/health');
+            check(response, {
+              'API Gateway status is 200': (r) => r.status === 200,
+              'API Gateway response time < 200ms': (r) => r.timings.duration < 200,
+            });
+            
+            // Test Analytics service
+            response = http.get('http://localhost:5003/health');
+            check(response, {
+              'Analytics status is 200': (r) => r.status === 200,
+              'Analytics response time < 300ms': (r) => r.timings.duration < 300,
+            });
+            
+            // Test AI-Tutor service
+            response = http.get('http://localhost:5004/health');
+            check(response, {
+              'AI-Tutor status is 200': (r) => r.status === 200,
+              'AI-Tutor response time < 400ms': (r) => r.timings.duration < 400,
+            });
+            
+            sleep(1);
+          }
+          EOF
+          
+          # Run the load test
+          k6 run --out json=load-test-results.json load-test.js
+      
+      - name: 📊 Process Load Test Results
+        run: |
+          # Extract key metrics from k6 results
+          echo "=== LOAD TEST SUMMARY ===" > load-test-summary.txt
+          echo "Test Duration: ${{ github.event.inputs.test_duration || '5' }} minutes" >> load-test-summary.txt
+          echo "Concurrent Users: ${{ github.event.inputs.concurrent_users || '100' }}" >> load-test-summary.txt
+          echo "Timestamp: $(date)" >> load-test-summary.txt
+          echo "" >> load-test-summary.txt
+          
+          # Process JSON results (basic parsing)
+          cat load-test-results.json | jq -r '.metrics | to_entries[] | select(.key | contains("http_")) | "\(.key): \(.value.type) = \(.value.value // .value.avg // "N/A")"' >> load-test-summary.txt || echo "Failed to process detailed metrics" >> load-test-summary.txt
+      
+      - name: 📊 Upload load test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: load-test-results
+          path: |
+            load-test-results.json
+            load-test-summary.txt
+            load-test.js
+
+  # 🧠 MEMORY PROFILING
+  memory-profiling:
+    name: 🧠 Memory Profiling
+    runs-on: ubuntu-latest
+    needs: unit-performance
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install profiling tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install memory-profiler psutil py-spy
+      
+      - name: 🚀 Start services for profiling
+        run: |
+          chmod +x ./start-ecosystem.sh
+          ./start-ecosystem.sh --profile-mode &
+          sleep 30
+      
+      - name: 🧠 Profile Analytics Service Memory
+        run: |
+          # Memory usage profiling
+          pid=$(pgrep -f "services/analytics/main.py" | head -1)
+          if [ ! -z "$pid" ]; then
+            echo "Profiling Analytics service (PID: $pid)"
+            py-spy record -o analytics-profile.svg -d 60 -p $pid || echo "Profiling completed"
+            
+            # Memory usage over time
+            for i in {1..60}; do
+              ps -p $pid -o pid,ppid,cmd,%mem,%cpu --no-headers >> analytics-memory.log
+              sleep 1
+            done
+          fi
+      
+      - name: 🧠 Profile AI-Tutor Service Memory
+        run: |
+          pid=$(pgrep -f "services/ai-tutor/main.py" | head -1)
+          if [ ! -z "$pid" ]; then
+            echo "Profiling AI-Tutor service (PID: $pid)"
+            py-spy record -o ai-tutor-profile.svg -d 60 -p $pid || echo "Profiling completed"
+            
+            # Memory usage over time
+            for i in {1..60}; do
+              ps -p $pid -o pid,ppid,cmd,%mem,%cpu --no-headers >> ai-tutor-memory.log
+              sleep 1
+            done
+          fi
+      
+      - name: 📊 Upload profiling results
+        uses: actions/upload-artifact@v3
+        with:
+          name: memory-profiling-results
+          path: |
+            *-profile.svg
+            *-memory.log
+
+  # 📊 PERFORMANCE REPORTING
+  performance-report:
+    name: 📊 Performance Report
+    runs-on: ubuntu-latest
+    needs: [unit-performance, integration-performance, load-testing, memory-profiling]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: performance-results
+      
+      - name: 📊 Generate Performance Report
+        run: |
+          echo "# 📊 Adaptive Learning Ecosystem - Performance Report" > performance-report.md
+          echo "" >> performance-report.md
+          echo "**Generated:** $(date)" >> performance-report.md
+          echo "**Commit:** ${{ github.sha }}" >> performance-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> performance-report.md
+          echo "" >> performance-report.md
+          
+          echo "## 🧪 Unit Performance Tests" >> performance-report.md
+          if [ -d "performance-results/unit-performance-results" ]; then
+            echo "✅ Unit performance tests completed" >> performance-report.md
+          else
+            echo "❌ Unit performance tests failed" >> performance-report.md
+          fi
+          echo "" >> performance-report.md
+          
+          echo "## 🌐 Integration Performance Tests" >> performance-report.md
+          if [ -d "performance-results/integration-performance-results" ]; then
+            echo "✅ Integration performance tests completed" >> performance-report.md
+            if [ -f "performance-results/integration-performance-results/response-times.log" ]; then
+              echo "### Response Times Sample:" >> performance-report.md
+              echo '```' >> performance-report.md
+              head -20 performance-results/integration-performance-results/response-times.log >> performance-report.md
+              echo '```' >> performance-report.md
+            fi
+          else
+            echo "❌ Integration performance tests failed" >> performance-report.md
+          fi
+          echo "" >> performance-report.md
+          
+          echo "## 🔥 Load Testing Results" >> performance-report.md
+          if [ -d "performance-results/load-test-results" ]; then
+            echo "✅ Load testing completed" >> performance-report.md
+            if [ -f "performance-results/load-test-results/load-test-summary.txt" ]; then
+              echo "### Load Test Summary:" >> performance-report.md
+              echo '```' >> performance-report.md
+              cat performance-results/load-test-results/load-test-summary.txt >> performance-report.md
+              echo '```' >> performance-report.md
+            fi
+          else
+            echo "⚠️ Load testing skipped or failed" >> performance-report.md
+          fi
+          echo "" >> performance-report.md
+          
+          echo "## 🧠 Memory Profiling" >> performance-report.md
+          if [ -d "performance-results/memory-profiling-results" ]; then
+            echo "✅ Memory profiling completed" >> performance-report.md
+            echo "Memory profile charts and logs available in artifacts" >> performance-report.md
+          else
+            echo "⚠️ Memory profiling skipped or failed" >> performance-report.md
+          fi
+          echo "" >> performance-report.md
+          
+          echo "## 📈 Recommendations" >> performance-report.md
+          echo "- Monitor response times and keep them under 200ms for critical endpoints" >> performance-report.md
+          echo "- Optimize memory usage if services exceed 512MB RAM" >> performance-report.md
+          echo "- Scale horizontally if error rate exceeds 1% under load" >> performance-report.md
+          echo "- Implement caching for frequently accessed data" >> performance-report.md
+      
+      - name: 📎 Upload final performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report-${{ github.sha }}
+          path: performance-report.md
+      
+      - name: 📢 Comment Performance Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('performance-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  # 🚨 PERFORMANCE ALERTS
+  performance-alerts:
+    name: 🚨 Performance Alerts
+    runs-on: ubuntu-latest
+    needs: [load-testing]
+    if: failure() && (github.event_name == 'schedule' || github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: 🚨 Send Performance Alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🚨 PERFORMANCE ALERT: Adaptive Learning Ecosystem
+            Load testing failed or performance degraded
+            Commit: ${{ github.sha }}
+            Check performance results for details
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

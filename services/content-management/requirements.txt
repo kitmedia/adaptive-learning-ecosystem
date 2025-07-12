@@ -1,0 +1,27 @@
+# Content Management Service Dependencies
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Database
+asyncpg>=0.29.0
+
+# File Handling
+aiofiles>=23.2.0
+pillow>=10.1.0
+
+# Data Models
+pydantic>=2.5.0
+
+# Async Support
+httpx>=0.25.0
+
+# Security
+passlib[bcrypt]>=1.7.4
+
+# Environment
+python-dotenv>=1.0.0
+
+# Essential only for MVP validation

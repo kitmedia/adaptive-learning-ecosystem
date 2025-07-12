@@ -1,0 +1,62 @@
+{
+  "alerting": {
+    "rules": [
+      {
+        "name": "high_error_rate",
+        "condition": "error_rate > 5",
+        "severity": "critical",
+        "message": "Tasa de errores muy alta: {{value}}%",
+        "channels": ["email", "webhook"],
+        "cooldown": 300
+      },
+      {
+        "name": "slow_page_load",
+        "condition": "page_load_time > 3000",
+        "severity": "warning",
+        "message": "Tiempo de carga lento: {{value}}ms",
+        "channels": ["console"],
+        "cooldown": 180
+      },
+      {
+        "name": "low_user_satisfaction",
+        "condition": "user_satisfaction < 7",
+        "severity": "warning",
+        "message": "Satisfacción del usuario baja: {{value}}/10",
+        "channels": ["email"],
+        "cooldown": 600
+      },
+      {
+        "name": "high_memory_usage",
+        "condition": "memory_usage > 512",
+        "severity": "error",
+        "message": "Uso de memoria alto: {{value}}MB",
+        "channels": ["webhook"],
+        "cooldown": 120
+      },
+      {
+        "name": "low_cache_hit_rate",
+        "condition": "cache_hit_rate < 80",
+        "severity": "info",
+        "message": "Tasa de cache baja: {{value}}%",
+        "channels": ["console"],
+        "cooldown": 300
+      }
+    ],
+    "channels": {
+      "email": {
+        "enabled": true,
+        "to": ["admin@ebrovalley.digital"],
+        "subject": "[ALERT] {{rule_name}} - {{severity}}"
+      },
+      "webhook": {
+        "enabled": true,
+        "url": "https://hooks.slack.com/your-webhook",
+        "method": "POST"
+      },
+      "console": {
+        "enabled": true,
+        "format": "json"
+      }
+    }
+  }
+}

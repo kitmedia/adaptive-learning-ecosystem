@@ -1,0 +1,19 @@
+{
+  "metrics": {
+    "active_users": 148,
+    "total_courses": 25,
+    "course_completions": 34,
+    "avg_engagement_score": 85.7,
+    "total_study_hours": 2847,
+    "user_growth_rate": 12.5
+  },
+  "weekly_data": [
+    {"date": "2024-12-01", "active_users": 125, "completions": 8},
+    {"date": "2024-12-02", "active_users": 132, "completions": 12},
+    {"date": "2024-12-03", "active_users": 138, "completions": 15},
+    {"date": "2024-12-04", "active_users": 142, "completions": 18},
+    {"date": "2024-12-05", "active_users": 145, "completions": 22},
+    {"date": "2024-12-06", "active_users": 148, "completions": 25},
+    {"date": "2024-12-07", "active_users": 152, "completions": 28}
+  ]
+}

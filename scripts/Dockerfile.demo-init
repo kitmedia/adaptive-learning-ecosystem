@@ -1,0 +1,47 @@
+# 🚀 Adaptive Learning Ecosystem - Demo Data Initializer
+# Dockerfile especializado para crear datos demo comerciales
+
+FROM python:3.12-slim
+
+# Metadata del contenedor
+LABEL maintainer="KitMedia <sales@kitmedia.es>"
+LABEL description="Demo Data Initializer for Adaptive Learning Ecosystem"
+LABEL version="1.0.0"
+
+# Variables de entorno
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Crear directorio de trabajo
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    sqlite3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Crear directorios necesarios
+RUN mkdir -p /app/demo-data /app/database /app/logs
+
+# Copiar script de inicialización
+COPY initialize_demo_data.py /app/
+
+# Instalar dependencias Python mínimas
+RUN pip install --no-cache-dir --upgrade pip
+
+# Configurar permisos
+RUN chmod +x /app/initialize_demo_data.py
+
+# Usuario no-root para seguridad
+RUN useradd --create-home --shell /bin/bash demo \
+    && chown -R demo:demo /app
+USER demo
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sqlite3; print('OK')" || exit 1
+
+# Comando por defecto
+CMD ["python", "initialize_demo_data.py"]

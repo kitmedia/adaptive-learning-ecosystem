@@ -1,0 +1,35 @@
+{
+  "student_id": "550e8400-e29b-41d4-a716-446655440003",
+  "responses": [
+    {
+      "question_id": "ls_001",
+      "selected_option": 2,
+      "response_time_seconds": 8
+    },
+    {
+      "question_id": "ls_002", 
+      "selected_option": 2,
+      "response_time_seconds": 6
+    },
+    {
+      "question_id": "lp_001",
+      "selected_option": 1,
+      "response_time_seconds": 4
+    },
+    {
+      "question_id": "da_001",
+      "selected_option": 1,
+      "response_time_seconds": 7
+    },
+    {
+      "question_id": "im_001",
+      "selected_option": 0,
+      "response_time_seconds": 5
+    },
+    {
+      "question_id": "af_001",
+      "selected_option": 1,
+      "response_time_seconds": 3
+    }
+  ]
+}

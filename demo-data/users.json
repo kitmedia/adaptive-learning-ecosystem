@@ -1,0 +1,36 @@
+{
+  "users": [
+    {
+      "id": "admin-001",
+      "email": "admin@demo.com",
+      "name": "Administrador Demo",
+      "role": "admin",
+      "password": "demo123",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "prof-001",
+      "email": "maria.gonzalez@demo.com",
+      "name": "Prof. María González",
+      "role": "teacher",
+      "password": "demo123",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "stud-001",
+      "email": "juan.perez@demo.com",
+      "name": "Juan Pérez",
+      "role": "student",
+      "password": "demo123",
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "stud-002",
+      "email": "lucia.sanchez@demo.com",
+      "name": "Lucía Sánchez",
+      "role": "student",
+      "password": "demo123",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}

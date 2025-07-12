@@ -1,0 +1,210 @@
+{
+  "demo_environment": {
+    "name": "Adaptive Learning Ecosystem - Commercial Demo",
+    "version": "1.0.0",
+    "description": "Entorno demo optimizado para demostraciones comerciales con datos realistas",
+    "created_date": "2025-07-12",
+    "expires_date": "2026-07-12"
+  },
+  "organizations": {
+    "demo_university": {
+      "name": "Demo University",
+      "domain": "demo-university.edu",
+      "type": "university",
+      "plan": "enterprise",
+      "target_audience": "Educación superior, universidades grandes",
+      "key_features": [
+        "Multi-departmental management",
+        "Research analytics",
+        "Student information system integration",
+        "Advanced reporting"
+      ],
+      "demo_highlights": [
+        "2,500 students management",
+        "45 active courses",
+        "Real-time analytics dashboard",
+        "AI-powered learning recommendations"
+      ]
+    },
+    "techcorp_training": {
+      "name": "TechCorp Training",
+      "domain": "techcorp.com",
+      "type": "corporate",
+      "plan": "professional",
+      "target_audience": "Empresas corporativas, formación de empleados",
+      "key_features": [
+        "Employee onboarding",
+        "Compliance training",
+        "Skills assessment",
+        "ROI tracking"
+      ],
+      "demo_highlights": [
+        "850 employees trained",
+        "18 specialized courses",
+        "Compliance reporting",
+        "Performance analytics"
+      ]
+    },
+    "codebootcamp_pro": {
+      "name": "CodeBootcamp Pro",
+      "domain": "codebootcamp.io",
+      "type": "bootcamp",
+      "plan": "starter",
+      "target_audience": "Bootcamps, academias de programación",
+      "key_features": [
+        "Cohort management",
+        "Project-based learning",
+        "Job placement tracking",
+        "Instructor tools"
+      ],
+      "demo_highlights": [
+        "120 coding students",
+        "8 intensive courses",
+        "Project portfolios",
+        "Career progression tracking"
+      ]
+    }
+  },
+  "demo_credentials": {
+    "admin_users": [
+      {
+        "email": "admin@demo.com",
+        "password": "AdminDemo2024!",
+        "role": "admin",
+        "organization": "demo_university",
+        "description": "Universidad - Administrador general"
+      },
+      {
+        "email": "admin@techcorp.com",
+        "password": "TechAdmin2024!",
+        "role": "admin",
+        "organization": "techcorp_training",
+        "description": "Corporativo - Director de formación"
+      },
+      {
+        "email": "admin@codebootcamp.io",
+        "password": "BootAdmin2024!",
+        "role": "admin",
+        "organization": "codebootcamp_pro",
+        "description": "Bootcamp - Director académico"
+      }
+    ],
+    "instructor_users": [
+      {
+        "email": "instructor@demo.com",
+        "password": "InstructorDemo2024!",
+        "role": "instructor",
+        "organization": "demo_university",
+        "description": "Universidad - Profesor titular"
+      },
+      {
+        "email": "trainer@techcorp.com",
+        "password": "Trainer2024!",
+        "role": "instructor",
+        "organization": "techcorp_training",
+        "description": "Corporativo - Formador interno"
+      },
+      {
+        "email": "mentor@codebootcamp.io",
+        "password": "Mentor2024!",
+        "role": "instructor",
+        "organization": "codebootcamp_pro",
+        "description": "Bootcamp - Mentor técnico"
+      }
+    ],
+    "student_users": [
+      {
+        "email": "student@demo.com",
+        "password": "StudentDemo2024!",
+        "role": "student",
+        "organization": "demo_university",
+        "description": "Universidad - Estudiante de grado"
+      },
+      {
+        "email": "employee@techcorp.com",
+        "password": "Employee2024!",
+        "role": "student",
+        "organization": "techcorp_training",
+        "description": "Corporativo - Empleado en formación"
+      },
+      {
+        "email": "coder@codebootcamp.io",
+        "password": "Coder2024!",
+        "role": "student",
+        "organization": "codebootcamp_pro",
+        "description": "Bootcamp - Estudiante de desarrollo"
+      }
+    ]
+  },
+  "demo_data_stats": {
+    "expected_totals": {
+      "organizations": 3,
+      "users": 42,
+      "courses": 8,
+      "enrollments": 80,
+      "modules": 96,
+      "ai_interactions": 400,
+      "analytics_records": 90
+    },
+    "performance_metrics": {
+      "average_completion_rate": "87.3%",
+      "average_engagement_score": "8.4/10",
+      "total_learning_hours": "12,450 hours",
+      "ai_interaction_satisfaction": "4.2/5 stars"
+    }
+  },
+  "demo_scenarios": [
+    {
+      "name": "Administrator Dashboard Tour",
+      "duration": "5 minutos",
+      "description": "Mostrar capacidades de gestión administrativa completas",
+      "key_points": [
+        "Dashboard de métricas en tiempo real",
+        "Gestión de usuarios y organizaciones",
+        "Configuración de límites y planes",
+        "Reportes de analytics avanzados"
+      ]
+    },
+    {
+      "name": "Student Learning Experience",
+      "duration": "3 minutos", 
+      "description": "Experiencia de aprendizaje del estudiante con IA",
+      "key_points": [
+        "Interfaz intuitiva de cursos",
+        "Interacción con AI Tutor",
+        "Progreso personalizado",
+        "Analytics de rendimiento"
+      ]
+    },
+    {
+      "name": "Instructor Tools Demo",
+      "duration": "4 minutos",
+      "description": "Herramientas avanzadas para instructores",
+      "key_points": [
+        "Creación de contenido",
+        "Monitoreo de estudiantes",
+        "Analytics de enseñanza",
+        "Herramientas de evaluación"
+      ]
+    },
+    {
+      "name": "Business Intelligence Showcase",
+      "duration": "6 minutos",
+      "description": "Capacidades de analytics y reportes empresariales",
+      "key_points": [
+        "ROI tracking detallado",
+        "Dashboards ejecutivos",
+        "Predictive analytics",
+        "Reportes de cumplimiento"
+      ]
+    }
+  ],
+  "technical_highlights": {
+    "architecture": "7 microservicios + Frontend React + API Gateway",
+    "security": "GDPR compliant, RBAC, Rate limiting inteligente",
+    "performance": "99.9% uptime, <200ms response time",
+    "scalability": "Kubernetes-ready, Multi-tenant",
+    "monitoring": "Prometheus + Grafana, Real-time alerts",
+    "deployment": "Docker-ready, CI/CD automated"
+  }
+}

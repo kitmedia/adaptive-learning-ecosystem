@@ -1,0 +1,1 @@
+# Shared modules for Adaptive Learning Ecosystem

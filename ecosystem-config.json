@@ -1,0 +1,221 @@
+{
+  "ecosystem": {
+    "name": "Adaptive Learning Ecosystem",
+    "version": "1.0.0",
+    "description": "Enterprise-grade adaptive learning platform with AI-powered personalization",
+    "environment": "production-ready"
+  },
+  "infrastructure": {
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "binary": "./services/ai-tutor/redis-stable/local/bin/redis-server",
+      "cli": "./services/ai-tutor/redis-stable/local/bin/redis-cli"
+    },
+    "database": {
+      "type": "sqlite",
+      "path": "./database/adaptive_learning.db",
+      "tables": 13,
+      "schemas": ["education", "users", "analytics"]
+    }
+  },
+  "services": {
+    "analytics": {
+      "name": "Analytics Service",
+      "port": 5003,
+      "path": "./services/analytics",
+      "description": "Real-time analytics and business intelligence",
+      "endpoints": {
+        "health": "/health",
+        "events": "/events",
+        "learning-analytics": "/learning-analytics",
+        "business-metrics": "/business-metrics",
+        "predictive-insights": "/predictive-insights",
+        "realtime-metrics": "/realtime-metrics"
+      },
+      "dependencies": ["redis", "sqlite", "pandas", "numpy", "scikit-learn"]
+    },
+    "ai-tutor": {
+      "name": "AI-Tutor Service", 
+      "port": 5004,
+      "path": "./services/ai-tutor",
+      "description": "Intelligent tutoring system with adaptive learning paths",
+      "endpoints": {
+        "health": "/health",
+        "diagnostic": "/diagnostic",
+        "adaptive-path": "/path/adaptive/{student_id}",
+        "feedback": "/feedback/realtime",
+        "evaluation": "/evaluation/continuous",
+        "student-profile": "/students/{student_id}/profile"
+      },
+      "dependencies": ["redis", "sqlite", "openai", "sklearn"]
+    },
+    "collaboration": {
+      "name": "Collaboration Service",
+      "port": 5002,
+      "path": "./services/collaboration",
+      "description": "Social learning and collaboration features",
+      "endpoints": {
+        "health": "/health",
+        "annotations": "/annotations",
+        "discussions": "/discussions", 
+        "gamification": "/gamification",
+        "social": "/social"
+      },
+      "dependencies": ["redis", "PyJWT"]
+    },
+    "content-intelligence": {
+      "name": "Content Intelligence Service",
+      "port": 5005,
+      "path": "./services/content-intelligence",
+      "description": "AI-powered content analysis and optimization",
+      "endpoints": {
+        "health": "/health",
+        "analyze": "/content/analyze",
+        "optimize": "/content/optimize",
+        "metadata": "/content/metadata",
+        "recommendations": "/content/recommendations"
+      },
+      "dependencies": ["redis", "openai", "langchain", "nltk", "textstat"]
+    },
+    "content-management": {
+      "name": "Content Management Service",
+      "port": 5001,
+      "path": "./services/content-management",
+      "description": "Comprehensive content and media management",
+      "endpoints": {
+        "health": "/health",
+        "content": "/content",
+        "upload": "/upload",
+        "media": "/media",
+        "scorm": "/scorm",
+        "lti": "/lti"
+      },
+      "dependencies": ["redis", "boto3", "ffmpeg-python", "langchain-community"]
+    },
+    "notifications": {
+      "name": "Notifications Service", 
+      "port": 5006,
+      "path": "./services/notifications",
+      "description": "Multi-channel notification system",
+      "endpoints": {
+        "health": "/health",
+        "send": "/notifications/send",
+        "templates": "/notifications/templates",
+        "preferences": "/notifications/preferences",
+        "history": "/notifications/history"
+      },
+      "dependencies": ["redis", "twilio", "fastapi"]
+    },
+    "progress-tracking": {
+      "name": "Progress Tracking Service",
+      "port": 5007,
+      "path": "./services/progress-tracking", 
+      "description": "Detailed learning progress monitoring",
+      "endpoints": {
+        "health": "/health",
+        "progress": "/progress",
+        "milestones": "/milestones",
+        "reports": "/reports",
+        "analytics": "/analytics"
+      },
+      "dependencies": ["sqlite", "fastapi"]
+    }
+  },
+  "frontend": {
+    "name": "React Frontend",
+    "port": 4173,
+    "path": "./frontend",
+    "description": "Modern React-based user interface",
+    "build": "npm run build",
+    "start": "npm run preview",
+    "dependencies": ["react", "typescript", "vite", "shadcn/ui"]
+  },
+  "api-gateway": {
+    "name": "API Gateway",
+    "port": 3001,
+    "path": "./api-gateway",
+    "description": "Central API gateway with authentication and routing",
+    "start": "npm run start:dev",
+    "dependencies": ["nestjs", "typescript", "swagger"],
+    "routes": {
+      "/api/analytics": "http://localhost:5003",
+      "/api/ai-tutor": "http://localhost:5004", 
+      "/api/collaboration": "http://localhost:5002",
+      "/api/content-intelligence": "http://localhost:5005",
+      "/api/content-management": "http://localhost:5001",
+      "/api/notifications": "http://localhost:5006",
+      "/api/progress-tracking": "http://localhost:5007"
+    }
+  },
+  "monitoring": {
+    "health-checks": {
+      "enabled": true,
+      "interval": "30s",
+      "timeout": "5s",
+      "script": "./health-check.sh"
+    },
+    "logging": {
+      "level": "info",
+      "format": "structured",
+      "rotation": "daily"
+    },
+    "metrics": {
+      "prometheus": true,
+      "grafana": false,
+      "custom-dashboards": true
+    }
+  },
+  "security": {
+    "authentication": {
+      "jwt": true,
+      "api-keys": true,
+      "oauth": false
+    },
+    "authorization": {
+      "rbac": true,
+      "permissions": ["admin", "teacher", "student", "guest"]
+    },
+    "encryption": {
+      "data-at-rest": true,
+      "data-in-transit": true,
+      "key-rotation": "monthly"
+    },
+    "compliance": {
+      "gdpr": true,
+      "ferpa": true,
+      "coppa": true
+    }
+  },
+  "deployment": {
+    "containerization": {
+      "docker": true,
+      "docker-compose": true,
+      "kubernetes": false
+    },
+    "ci-cd": {
+      "github-actions": true,
+      "automated-testing": true,
+      "deployment-pipeline": true
+    },
+    "scaling": {
+      "horizontal": true,
+      "load-balancer": true,
+      "auto-scaling": false
+    }
+  },
+  "performance": {
+    "targets": {
+      "response-time": "< 200ms",
+      "throughput": "> 1000 req/s",
+      "availability": "> 99.9%",
+      "concurrent-users": "> 10000"
+    },
+    "optimization": {
+      "caching": true,
+      "cdn": false,
+      "compression": true,
+      "minification": true
+    }
+  }
+}

@@ -1,0 +1,232 @@
+/* Estilos para componentes de diagnóstico */
+
+.diagnostic-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.diagnostic-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.diagnostic-header h3 {
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.question-container {
+  margin-bottom: 2rem;
+}
+
+.question-container h4 {
+  color: #374151;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option-button {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.option-button:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.diagnostic-info {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.diagnostic-info small {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.diagnostic-loading {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.diagnostic-error {
+  text-align: center;
+  padding: 2rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.diagnostic-error h3 {
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.diagnostic-error button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.diagnostic-error button:hover {
+  background: #b91c1c;
+}
+
+.diagnostic-results {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f0f9ff, #ecfdf5);
+  border-radius: 12px;
+  border: 1px solid #a7f3d0;
+}
+
+.diagnostic-results h3 {
+  color: #059669;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.profile-summary {
+  text-align: left;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.profile-summary h4 {
+  color: #374151;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.profile-item {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.profile-item strong {
+  color: #1f2937;
+  display: inline-block;
+  min-width: 140px;
+}
+
+.diagnostic-results button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.diagnostic-results button:hover {
+  background: #2563eb;
+}
+
+.diagnostic-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+}
+
+.diagnostic-empty button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.diagnostic-empty button:hover {
+  background: #2563eb;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .diagnostic-container {
+    padding: 1rem;
+    margin: 1rem;
+  }
+  
+  .question-container h4 {
+    font-size: 1.125rem;
+  }
+  
+  .option-button {
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+  }
+}

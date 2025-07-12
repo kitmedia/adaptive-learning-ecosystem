@@ -1,0 +1,37 @@
+{
+  "courses": [
+    {
+      "id": "course-001",
+      "title": "Introducción a la Inteligencia Artificial",
+      "description": "Curso completo sobre los fundamentos de la IA y machine learning",
+      "instructor_id": "prof-001",
+      "category": "Technology",
+      "difficulty": "beginner",
+      "duration_hours": 40,
+      "students_enrolled": 15,
+      "completion_rate": 78.5
+    },
+    {
+      "id": "course-002",
+      "title": "Desarrollo Web Full Stack",
+      "description": "Aprende React, Node.js, PostgreSQL y mejores prácticas",
+      "instructor_id": "prof-001",
+      "category": "Programming",
+      "difficulty": "intermediate",
+      "duration_hours": 60,
+      "students_enrolled": 22,
+      "completion_rate": 65.2
+    },
+    {
+      "id": "course-003",
+      "title": "Marketing Digital Avanzado",
+      "description": "Estrategias modernas de marketing digital y analytics",
+      "instructor_id": "prof-001",
+      "category": "Business",
+      "difficulty": "advanced",
+      "duration_hours": 35,
+      "students_enrolled": 18,
+      "completion_rate": 82.1
+    }
+  ]
+}

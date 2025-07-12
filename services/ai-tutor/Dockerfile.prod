@@ -1,0 +1,136 @@
+# Multi-stage Dockerfile for AI-Tutor Service - Production Optimized
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# =============================================================================
+# STAGE 1: Dependencies Installation
+# =============================================================================
+FROM python:3.11-slim AS dependencies
+
+LABEL maintainer="EbroValley Digital <dev@ebrovalley.com>"
+LABEL description="Adaptive Learning Ecosystem - AI Tutor Service (Production)"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    gcc \
+    g++ \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY services/ai-tutor/requirements.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
+
+# =============================================================================
+# STAGE 2: Application Build
+# =============================================================================
+FROM python:3.11-slim AS build
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Install minimal system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r fastapi && useradd -r -g fastapi fastapi
+
+WORKDIR /app
+
+# Copy installed packages from dependencies stage
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY services/ai-tutor/ ./
+
+# Create necessary directories
+RUN mkdir -p logs models cache \
+    && chown -R fastapi:fastapi /app
+
+# Download and cache ML models (optional pre-loading)
+RUN python -c "
+import nltk
+import ssl
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+nltk.download('punkt', download_dir='/app/models/nltk_data')
+nltk.download('stopwords', download_dir='/app/models/nltk_data')
+" || echo "NLTK downloads failed, will download at runtime"
+
+# =============================================================================
+# STAGE 3: Production Stage
+# =============================================================================
+FROM python:3.11-slim AS production
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    ENVIRONMENT=production \
+    WORKERS=4 \
+    HOST=0.0.0.0 \
+    PORT=8000
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user
+RUN groupadd -r fastapi && useradd -r -g fastapi fastapi
+
+WORKDIR /app
+
+# Copy everything from build stage
+COPY --from=build --chown=fastapi:fastapi /app ./
+COPY --from=build --chown=fastapi:fastapi /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=build --chown=fastapi:fastapi /usr/local/bin /usr/local/bin
+
+# Set NLTK data path if models were pre-downloaded
+ENV NLTK_DATA=/app/models/nltk_data
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Switch to non-root user
+USER fastapi
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application with Uvicorn
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--access-log", "--log-level", "info"]

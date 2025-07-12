@@ -47,17 +47,17 @@ async function bootstrap() {
     maxAge: 86400, // 24 hours preflight cache
   });
 
-  // VALIDATION DISABLED FOR DEBUGGING
-  // app.useGlobalPipes(new ValidationPipe({
-  //   transform: true,
-  //   whitelist: false, // No filtrar propiedades
-  //   forbidNonWhitelisted: false, // No rechazar propiedades
-  //   disableErrorMessages: false, // Mostrar errores completos
-  //   validateCustomDecorators: false, // Desactivar validación personalizada
-  //   transformOptions: {
-  //     enableImplicitConversion: true, // Conversión automática
-  //   },
-  // }));
+  // Global validation pipe with security-focused settings
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true, // Strip unknown properties
+    forbidNonWhitelisted: true, // Reject requests with unknown properties
+    disableErrorMessages: process.env.NODE_ENV === 'production', // Hide validation details in production
+    validateCustomDecorators: true,
+    transformOptions: {
+      enableImplicitConversion: false, // Require explicit type conversion
+    },
+  }));
   
   // API prefix
   app.setGlobalPrefix('api/v1');

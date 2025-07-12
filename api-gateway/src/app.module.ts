@@ -10,6 +10,7 @@ import { AssessmentModule } from './modules/assessment/assessment.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { CollaborationModule } from './modules/collaboration/collaboration.module';
 import { ContentIntelligenceModule } from './modules/content-intelligence/content-intelligence.module';
+import { ContentManagementModule } from './modules/content-management/content-management.module';
 import { AuthModule } from './auth/auth.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
@@ -38,6 +39,7 @@ import { ApiKeyGuard } from './security/api-key.guard';
     NotificationsModule,
     CollaborationModule,
     ContentIntelligenceModule,
+    ContentManagementModule,
     
     // Monitoring y métricas
     MetricsModule,

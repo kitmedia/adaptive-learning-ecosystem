@@ -1,0 +1,13 @@
+{
+  "student_id": "550e8400-e29b-41d4-a716-446655440003",
+  "activity_data": {
+    "lesson_id": "550e8400-e29b-41d4-a716-446655440030",
+    "activity_type": "interactive_exercise",
+    "time_spent": 1200,
+    "completion_percentage": 75.0,
+    "interactions": 18,
+    "correct_answers": 12,
+    "total_attempts": 15,
+    "engagement_score": 0.8
+  }
+}

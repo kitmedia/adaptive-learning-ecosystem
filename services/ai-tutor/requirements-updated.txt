@@ -1,0 +1,45 @@
+# AI-Tutor Service Dependencies - Updated for Python 3.12
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# FastAPI and core dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.0
+pydantic==2.6.1
+python-multipart==0.0.6
+
+# HTTP client
+httpx==0.26.0
+
+# Data processing and ML - Updated versions for Python 3.12
+numpy==1.26.4
+pandas==2.2.0
+scikit-learn==1.4.0
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Environment configuration
+python-dotenv==1.0.0
+
+# Database connections
+asyncpg==0.29.0
+redis==5.0.1
+
+# AI and ML services - Updated versions
+openai==1.12.0
+anthropic==0.18.1
+sentence-transformers==2.4.0
+qdrant-client==1.7.3
+
+# NLP and transformers
+transformers==4.37.2
+torch==2.2.0
+
+# Monitoring
+prometheus-client==0.20.0
+
+# Additional utilities
+tiktoken==0.6.0
+langchain==0.1.5
+langchain-openai==0.0.6

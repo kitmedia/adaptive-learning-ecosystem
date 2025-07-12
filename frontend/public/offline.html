@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sin Conexión - Adaptive Learning Platform</title>
+    <meta name="description" content="Página offline para cuando no hay conexión a internet">
+    <meta name="theme-color" content="#2563eb">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 3rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 1rem;
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: #f8fafc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        h1 {
+            color: #1e293b;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: #64748b;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+        }
+
+        .offline-features {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-card {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .feature-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .offline-tips {
+            text-align: left;
+            margin-top: 1.5rem;
+        }
+
+        .offline-tips h3 {
+            color: #374151;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .offline-tips ul {
+            color: #6b7280;
+            font-size: 0.875rem;
+            padding-left: 1.5rem;
+        }
+
+        .offline-tips li {
+            margin-bottom: 0.25rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 2rem 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">
+            📡
+        </div>
+        
+        <div class="status-indicator">
+            <span class="pulse"></span>
+            Sin conexión a internet
+        </div>
+        
+        <h1>¡Ups! Sin Conexión</h1>
+        <p>No hemos podido conectar con nuestros servidores. Verifica tu conexión a internet e intenta nuevamente.</p>
+        
+        <button class="retry-btn" onclick="window.location.reload()">
+            🔄 Reintentar Conexión
+        </button>
+        
+        <div class="offline-features">
+            <h2 style="color: #374151; font-size: 1.2rem; margin-bottom: 1rem;">Funciones Disponibles Sin Conexión</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <div class="feature-title">Contenido Descargado</div>
+                    <div class="feature-desc">Accede a lecciones previamente cargadas</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <div class="feature-title">Notas Locales</div>
+                    <div class="feature-desc">Crea y edita notas que se sincronizarán después</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">Progreso Guardado</div>
+                    <div class="feature-desc">Tu progreso se guarda automáticamente</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-title">Ejercicios Offline</div>
+                    <div class="feature-desc">Continúa practicando con ejercicios descargados</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="offline-tips">
+            <h3>Consejos para una mejor experiencia:</h3>
+            <ul>
+                <li>Verifica que tu WiFi esté conectado</li>
+                <li>Prueba reiniciar tu router si es necesario</li>
+                <li>Los datos se sincronizarán automáticamente al reconectar</li>
+                <li>Puedes continuar usando funciones básicas sin conexión</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-retry connection every 30 seconds
+        setInterval(() => {
+            if (navigator.onLine) {
+                window.location.reload();
+            }
+        }, 30000);
+        
+        // Listen for online events
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+        
+        // Update UI based on connection status
+        function updateConnectionStatus() {
+            const indicator = document.querySelector('.status-indicator');
+            if (navigator.onLine) {
+                indicator.innerHTML = '<span class="pulse"></span>Reconectando...';
+                indicator.style.background = '#d1fae5';
+                indicator.style.color = '#065f46';
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        }
+        
+        // Check connection status periodically
+        setInterval(updateConnectionStatus, 5000);
+        
+        // Service Worker messaging
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                // Send message to SW that user is on offline page
+                registration.active?.postMessage({
+                    type: 'OFFLINE_PAGE_VIEWED',
+                    timestamp: Date.now()
+                });
+            });
+        }
+    </script>
+</body>
+</html>

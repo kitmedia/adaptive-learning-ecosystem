@@ -1,0 +1,36 @@
+# AI-Tutor Service Core Dependencies - Production Ready
+# Adaptive Learning Ecosystem - EbroValley Digital
+
+# FastAPI and core dependencies
+fastapi==0.109.2
+uvicorn[standard]==0.27.0
+pydantic==2.6.1
+python-multipart==0.0.6
+
+# HTTP client
+httpx==0.26.0
+
+# Data processing and ML
+numpy==1.26.4
+pandas==2.2.0
+scikit-learn==1.4.0
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Environment configuration
+python-dotenv==1.0.0
+
+# Database connections
+asyncpg==0.29.0
+redis==5.0.1
+
+# AI and ML services - Core only
+openai==1.12.0
+
+# Monitoring
+prometheus-client==0.20.0
+
+# Additional utilities
+tiktoken==0.6.0

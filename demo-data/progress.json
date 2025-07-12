@@ -1,0 +1,22 @@
+{
+  "student_progress": [
+    {
+      "user_id": "stud-001",
+      "course_id": "course-001",
+      "progress_percentage": 75,
+      "current_lesson": "Redes Neuronales Artificiales",
+      "avg_score": 91.7,
+      "time_spent_hours": 12.5,
+      "last_activity": "2024-12-07T15:30:00Z"
+    },
+    {
+      "user_id": "stud-002",
+      "course_id": "course-001",
+      "progress_percentage": 60,
+      "current_lesson": "Machine Learning Básico",
+      "avg_score": 87.5,
+      "time_spent_hours": 10.2,
+      "last_activity": "2024-12-06T11:20:00Z"
+    }
+  ]
+}

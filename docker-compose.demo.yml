@@ -1,0 +1,304 @@
+version: '3.8'
+
+# 🚀 Adaptive Learning Ecosystem - Demo Environment
+# Optimized for sales demos and POCs with pre-loaded demo data
+
+services:
+  # API Gateway - Main entry point
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:3000"
+    environment:
+      - NODE_ENV=demo
+      - DEMO_MODE=true
+      - CORS_ORIGIN=http://localhost:3000
+      - JWT_SECRET=demo_secret_key_2024
+      - DATABASE_URL=sqlite:./demo.db
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend - React Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENV=demo
+      - REACT_APP_DEMO_MODE=true
+    networks:
+      - demo-network
+    depends_on:
+      - api-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI-Tutor Service
+  ai-tutor:
+    build:
+      context: ./services/ai-tutor
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379/0
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Analytics Service
+  analytics:
+    build:
+      context: ./services/analytics
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379/1
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Assessment Service
+  assessment:
+    build:
+      context: ./services/assessment
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379/2
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Content Management Service
+  content-management:
+    build:
+      context: ./services/content-management
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379/3
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Progress Tracking Service
+  progress-tracking:
+    build:
+      context: ./services/progress-tracking
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379/4
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis - Demo optimized
+  redis-demo:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - demo-network
+    volumes:
+      - redis-demo-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Monitoring Stack for Demo
+  prometheus-demo:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=1d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-demo-data:/prometheus
+    networks:
+      - demo-network
+    depends_on:
+      - api-gateway
+
+  grafana-demo:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=demo123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-demo-data:/var/lib/grafana
+    networks:
+      - demo-network
+    depends_on:
+      - prometheus-demo
+
+  # Demo Data Initializer
+  demo-initializer:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.demo-init
+    environment:
+      - DATABASE_URL=sqlite:./demo.db
+      - REDIS_URL=redis://redis-demo:6379
+      - API_BASE_URL=http://api-gateway:3000
+    volumes:
+      - ./demo-data:/app/demo-data
+      - demo-database:/app/database
+    networks:
+      - demo-network
+    depends_on:
+      - redis-demo
+      - api-gateway
+    restart: "no"
+    command: ["python", "initialize_demo_data.py"]
+
+networks:
+  demo-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  redis-demo-data:
+    driver: local
+  prometheus-demo-data:
+    driver: local
+  grafana-demo-data:
+    driver: local
+  demo-database:
+    driver: local
+
+# Demo-specific configurations
+x-demo-config:
+  pre-loaded-users: &demo-users
+    - email: "admin@demo.com"
+      password: "AdminDemo2024!"
+      role: "admin"
+      tenant: "demo-university"
+    - email: "instructor@demo.com"
+      password: "InstructorDemo2024!"
+      role: "instructor"
+      tenant: "demo-university"
+    - email: "student@demo.com"
+      password: "StudentDemo2024!"
+      role: "student"
+      tenant: "demo-university"
+  
+  demo-organizations: &demo-orgs
+    - name: "Demo University"
+      domain: "demo-university.edu"
+      type: "university"
+      plan: "enterprise"
+      users: 2500
+      active_courses: 45
+    - name: "TechCorp Training"
+      domain: "techcorp.com"
+      type: "corporate"
+      plan: "professional"
+      users: 850
+      active_courses: 18
+    - name: "CodeBootcamp Pro"
+      domain: "codebootcamp.io"
+      type: "bootcamp"
+      plan: "starter"
+      users: 120
+      active_courses: 8
+
+  demo-metrics: &demo-metrics
+    learning_completion_rate: 87.3
+    average_engagement_score: 8.4
+    monthly_active_users: 1847
+    total_learning_hours: 12450
+    ai_interactions: 8965
+    assessment_completions: 2341
